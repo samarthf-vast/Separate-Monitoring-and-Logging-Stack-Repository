@@ -1,0 +1,552 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-alerting
+  namespace: weather-monitoring
+data:
+  contact-points.yaml: |
+    apiVersion: 1
+
+    contactPoints:
+
+      - orgId: 1
+        name: container-email-alert
+        receivers:
+          - uid: container-email1
+            type: email
+            disableResolveMessage: true
+            settings:
+              addresses: samarthf@valueaddsofttech.com
+              subject: '{{ template "container_alert_subject" . }}'
+              singleEmail: true
+
+      - orgId: 1
+        name: container-start-email-alert
+        receivers:
+          - uid: container-start-email1
+            type: email
+            disableResolveMessage: true
+            settings:
+              addresses: samarthf@valueaddsofttech.com
+              subject: '{{ template "container_start_subject" . }}'
+              singleEmail: true
+
+      - orgId: 1
+        name: monitoring-email-alert
+        receivers:
+          - uid: monitoring-email1
+            type: email
+            disableResolveMessage: false
+            settings:
+              addresses: samarthf@valueaddsofttech.com
+              subject: '{{ template "monitoring_alert_subject" . }}'
+              singleEmail: true
+
+      - orgId: 1
+        name: infra-email-alert
+        receivers:
+          - uid: infra-email1
+            type: email
+            disableResolveMessage: false
+            settings:
+              addresses: samarthf@valueaddsofttech.com
+              subject: '{{ template "infra_alert_subject" . }}'
+              singleEmail: true
+
+  notification-policies.yaml: |
+    apiVersion: 1
+
+    policies:
+      - orgId: 1
+        receiver: infra-email-alert
+        group_by:
+          - alertname
+        group_wait: 30s
+        group_interval: 5m
+        repeat_interval: 5m
+
+        routes:
+          - receiver: container-email-alert
+            group_by:
+              - alertname
+            group_wait: 30s
+            group_interval: 5m
+            repeat_interval: 5m
+            matchers:
+              - category="container"
+
+          - receiver: container-start-email-alert
+            group_by:
+              - alertname
+              - container
+            group_wait: 30s
+            group_interval: 5m
+            repeat_interval: 24h
+            matchers:
+              - category="container-start"
+
+          - receiver: monitoring-email-alert
+            group_by:
+              - alertname
+            group_wait: 30s
+            group_interval: 5m
+            repeat_interval: 5m
+            matchers:     
+              - category="monitoring"
+
+  templates.yml: |
+    apiVersion: 1
+    
+    templates:
+
+      - orgId: 1
+        name: container_alert_subject
+        template: |
+          {{ define "container_alert_subject" -}}
+          {{- if eq .Status "resolved" -}}
+          ✅ Container Start Alert — {{ range $i, $a := .Alerts.Resolved }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+          {{- else -}}
+          🚨 {{ .CommonLabels.alertname }} — {{ range $i, $a := .Alerts.Firing }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+          {{- end -}}
+          {{- end }}
+
+      - orgId: 1
+        name: container_start_subject
+        template: |
+          {{ define "container_start_subject" -}}
+          ✅ Container Start Alert — {{ range $i, $a := .Alerts.Firing }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+          {{- end }}
+
+      - orgId: 1
+        name: monitoring_alert_subject
+        template: |
+          {{ define "monitoring_alert_subject" -}}
+          {{- if eq .Status "resolved" -}}
+          ✅ Monitoring Container Start Alert — {{ range $i, $a := .Alerts.Resolved }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+          {{- else -}}
+          🚨 {{ .CommonLabels.alertname }} — {{ range $i, $a := .Alerts.Firing }}{{ if $i }}, {{ end }}{{ $a.Labels.container }}{{ end }}
+          {{- end -}}
+          {{- end }}
+
+      - orgId: 1
+        name: infra_alert_subject
+        template: |
+          {{ define "infra_alert_subject" -}}
+          {{- if eq .Status "resolved" -}}
+          ✅ [RESOLVED] {{ .CommonLabels.alertname }}
+          {{- else -}}
+          🚨 [CRITICAL] {{ .CommonLabels.alertname }}
+          {{- end -}}
+          {{- end }}
+
+  container-alerts.yml: |
+    apiVersion: 1
+
+    groups:
+
+      - orgId: 1
+        name: Container Alerts
+        folder: Container Alerts
+        interval: 5m
+
+        rules:
+
+          - uid: containercpu1
+            title: Container Wise CPU Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: |
+                    max by (container) (
+                      sum by (container) (
+                        rate(container_cpu_usage_seconds_total{
+                          container!="",container!="POD",namespace="weather-app"
+                        }[5m])
+                      ) * 100
+                    )
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: >-
+                Container {{ $labels.container }} CPU is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
+            labels:
+              severity: critical
+              category: container
+
+          - uid: containermemory1
+            title: Container Wise Memory Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: |
+                    max by (container) (
+                      (
+                        container_memory_usage_bytes{container!="",container!="POD",namespace="weather-app"}
+                        /
+                        container_spec_memory_limit_bytes{container!="",container!="POD",namespace="weather-app"}
+                      ) * 100
+                    )
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: >-
+                Container {{ $labels.container }} memory is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
+            labels:
+              severity: critical
+              category: container
+
+          - uid: containerdown1
+            title: Container Down Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 86400
+                  to: 0
+                model:
+                  expr: |
+                    min by (container) (
+                      time() - max_over_time(
+                        container_last_seen{container!="",container!="POD",namespace="weather-app"}[24h]
+                      )
+                    )
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [120]
+                        type: gt
+            for: 0s
+            noDataState: Alerting
+            execErrState: Alerting
+            annotations:
+              summary: >-
+                Container {{ $labels.container }} is DOWN — not seen for {{ $values.A.Value | printf "%.0f" }} seconds
+            labels:
+              severity: critical
+              category: container
+
+      - orgId: 1
+        name: Container Start Alerts
+        folder: Container Alerts
+        interval: 1m
+
+        rules:
+
+          - uid: containerstart1
+            title: Container Start Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 7200
+                  to: 0
+                model:
+                  expr: |
+                    min by (container) (
+                      time() - container_last_seen{container!="",container!="POD",namespace="weather-app"}
+                    )
+                    and on(container) (
+                      max_over_time(
+                        min by (container) (
+                          time() - container_last_seen{container!="",container!="POD",namespace="weather-app"}
+                        )[2h:1m]
+                      ) > 120
+                    )
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [90]
+                        type: lt
+            for: 0s
+            noDataState: OK
+            execErrState: OK
+            annotations:
+              summary: >-
+                Container {{ $labels.container }} is UP and running
+            labels:
+              severity: info
+              category: container-start
+
+  infrastructure-alerts.yml: |
+    apiVersion: 1
+
+    groups:
+      - orgId: 1
+        name: Infrastructure Alerts
+        folder: Infrastructure
+        interval: 5m
+
+        rules:
+           
+          # CPU Alert
+
+          - uid: cpualert1
+            title: CPU Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: 100 - (avg by(instance)(rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100)
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: CPU usage is above 80%
+            labels:
+              severity: critical
+              category: infrastructure
+          
+          # Memory Alert
+
+          - uid: memoryalert1
+            title: Memory Usage Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: Memory usage is above 80%
+            labels:
+              severity: critical
+              category: infrastructure
+          
+          # Disk Alert
+          
+          - uid: diskalert1
+            title: Disk Usage Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: 100 - ((node_filesystem_avail_bytes{mountpoint="/"} * 100) / node_filesystem_size_bytes{mountpoint="/"})
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: Disk usage above 80%
+            labels:
+              severity: critical
+              category: infrastructure
+
+  monitoring-alerts.yml: |
+    apiVersion: 1
+
+    groups:
+      - orgId: 1
+        name: Monitoring Container Alerts
+        folder: Monitoring Alerts
+        interval: 5m
+
+        rules:
+
+          - uid: monitorcpu1
+            title: Monitoring Container CPU Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: |
+                    max by (container) (
+                      sum by (container) (
+                        rate(container_cpu_usage_seconds_total{
+                          container!="",container!="POD",namespace="weather-monitoring"
+                        }[5m])
+                      ) * 100
+                    )
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: >-
+                Monitoring container {{ $labels.container }} CPU is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
+            labels:
+              severity: critical
+              category: monitoring
+
+          - uid: monitormemory1
+            title: Monitoring Container Memory Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 300
+                  to: 0
+                model:
+                  expr: |
+                    max by (container) (
+                      (
+                        container_memory_usage_bytes{container!="",container!="POD",namespace="weather-monitoring"}
+                        /
+                        container_spec_memory_limit_bytes{container!="",container!="POD",namespace="weather-monitoring"}
+                      ) * 100
+                    )
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [80]
+                        type: gt
+            for: 5m
+            noDataState: OK
+            execErrState: Alerting
+            annotations:
+              summary: >-
+                Monitoring container {{ $labels.container }} memory is at {{ $values.A.Value | printf "%.1f" }}% (threshold: 80%)
+            labels:
+              severity: critical
+              category: monitoring
+
+          - uid: monitordown1
+            title: Monitoring Container Down Alert
+            condition: B
+            data:
+              - refId: A
+                datasourceUid: prometheus
+                relativeTimeRange:
+                  from: 86400
+                  to: 0
+                model:
+                  expr: |
+                    min by (container) (
+                      time() - max_over_time(
+                        container_last_seen{container!="",container!="POD",namespace="weather-monitoring"}[24h]
+                      )
+                    )
+                  instant: true
+                  refId: A
+              - refId: B
+                datasourceUid: "__expr__"
+                model:
+                  expression: A
+                  type: threshold
+                  conditions:
+                    - evaluator:
+                        params: [120]
+                        type: gt
+            for: 1m
+            noDataState: Alerting
+            execErrState: Alerting
+            annotations:
+              summary: >-
+                Monitoring container {{ $labels.container }} is DOWN — not seen for {{ $values.A.Value | printf "%.0f" }} seconds
+            labels:
+              severity: critical
+              category: monitoring

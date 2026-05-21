@@ -1,0 +1,9 @@
+# Secrets
+k8s/secrets/
+.env
+
+# OS
+.DS_Store
+
+# Logs
+*.log

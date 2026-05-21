@@ -1,0 +1,125 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grafana
+  namespace: weather-monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: grafana
+  template:
+    metadata:
+      labels:
+        app: grafana
+    spec:
+      containers:
+        - name: grafana
+          image: grafana/grafana:13.0.1
+          ports:
+            - containerPort: 3000
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              /run.sh &
+              sleep 40
+              sh /scripts/grafana-user-setup.sh
+              wait
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secrets
+                  key: GF_SECURITY_ADMIN_USER
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secrets
+                  key: GF_SECURITY_ADMIN_PASSWORD
+            - name: GF_SMTP_ENABLED
+              value: "true"
+            - name: GF_SMTP_HOST
+              value: "smtp.gmail.com:587"
+            - name: GF_SMTP_USER
+              value: "samarthf@valueaddsofttech.com"
+            - name: GF_SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: grafana-secrets
+                  key: GF_SMTP_PASSWORD
+            - name: GF_SMTP_FROM_ADDRESS
+              value: "samarthf@valueaddsofttech.com"
+            - name: GF_SMTP_FROM_NAME
+              value: "Grafana"
+            - name: GF_SMTP_SKIP_VERIFY
+              value: "true"
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 60
+            periodSeconds: 30
+            failureThreshold: 5
+          readinessProbe:
+            httpGet:
+              path: /api/health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 15
+            failureThreshold: 5
+          volumeMounts:
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            - name: grafana-dashboards-config
+              mountPath: /etc/grafana/provisioning/dashboards
+            - name: grafana-alerting
+              mountPath: /etc/grafana/provisioning/alerting
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards/container-monitoring.json
+              subPath: container-monitoring.json
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards/logs-dashboard.json
+              subPath: logs-dashboard.json
+            - name: grafana-dashboard-node
+              mountPath: /var/lib/grafana/dashboards/node-exporter.json
+              subPath: node-exporter.json
+            - name: grafana-user-setup
+              mountPath: /scripts
+            - name: grafana-email-template
+              mountPath: /usr/share/grafana/public/emails/ng_alert_notification.html
+              subPath: ng_alert_notification.html
+      volumes:
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: grafana-pvc
+        - name: grafana-datasources
+          configMap:
+            name: grafana-datasources
+        - name: grafana-dashboards-config
+          configMap:
+            name: grafana-dashboards-config
+        - name: grafana-alerting
+          configMap:
+            name: grafana-alerting
+        - name: grafana-dashboards
+          configMap:
+            name: grafana-dashboards
+        - name: grafana-dashboard-node
+          configMap:
+            name: grafana-dashboard-node
+        - name: grafana-user-setup
+          configMap:
+            name: grafana-user-setup
+            defaultMode: 0755
+        - name: grafana-email-template
+          configMap:
+            name: grafana-email-template

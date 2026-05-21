@@ -1,0 +1,82 @@
+# ============================================================
+#  MONITORING REPO PIPELINE
+#  Repo: Separate-Monitoring-and-Logging-Stack-Repository
+#
+#  Single pipeline for all monitoring tools:
+#  Prometheus, Grafana, Loki, Alloy, cAdvisor, Node Exporter
+#
+#  Triggers only when monitoring files actually change
+# ============================================================
+
+name: Monitoring CI/CD
+
+on:
+  push:
+    branches: ["master"]
+    paths:
+      - "k8s/monitoring/**"
+      - "k8s/configmaps/**"
+      - "k8s/namespace.yml"
+
+jobs:
+
+  # ──────────────────────────────────────────
+  # ONE JOB — Deploy entire monitoring stack
+  # Sequential steps ensure correct order:
+  # namespace → secrets → configmaps → manifests → restart
+  # ──────────────────────────────────────────
+  deploy-monitoring:
+    name: Deploy Monitoring Stack
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6.0.2
+
+      # Step 1 — Namespace must exist before everything
+      - name: Apply Namespace
+        run: kubectl apply -f k8s/namespace.yml
+
+      # Step 2 — Create Grafana secrets from GitHub Actions secrets
+      - name: Create Grafana Secrets in Kubernetes
+        run: |
+          kubectl create secret generic grafana-secrets \
+            --from-literal=GF_SECURITY_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }} \
+            --from-literal=GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }} \
+            --from-literal=GF_SMTP_PASSWORD=${{ secrets.GRAFANA_SMTP_PASSWORD }} \
+            --namespace=weather-monitoring \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      # Step 3 — ConfigMaps must be applied before deployments
+      # (deployments mount configmaps as volumes)
+      - name: Apply All ConfigMaps
+        run: kubectl apply -f k8s/configmaps/
+
+      # Step 4 — Apply all monitoring manifests
+      # (RBAC, DaemonSets, Deployments, Services, PVCs)
+      - name: Apply Monitoring Manifests
+        run: kubectl apply -f k8s/monitoring/
+
+      # Step 5 — Restart deployments to pick up new configmap values
+      - name: Restart Prometheus
+        run: kubectl rollout restart deployment/prometheus -n weather-monitoring
+
+      - name: Restart Grafana
+        run: kubectl rollout restart deployment/grafana -n weather-monitoring
+
+      - name: Restart Loki
+        run: kubectl rollout restart deployment/loki -n weather-monitoring
+
+      # Step 6 — Wait for all deployments to be healthy
+      - name: Wait for Prometheus
+        run: kubectl rollout status deployment/prometheus -n weather-monitoring --timeout=120s
+
+      - name: Wait for Grafana
+        run: kubectl rollout status deployment/grafana -n weather-monitoring --timeout=120s
+
+      - name: Wait for Loki
+        run: kubectl rollout status deployment/loki -n weather-monitoring --timeout=120s
+
+      # Step 7 — Final verification
+      - name: Verify All Monitoring Pods
+        run: kubectl get pods -n weather-monitoring

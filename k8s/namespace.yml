@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: weather-app
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: weather-monitoring
