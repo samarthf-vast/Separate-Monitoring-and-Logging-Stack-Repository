@@ -49,13 +49,14 @@ jobs:
 
       # Step 3 — ConfigMaps must be applied before deployments
       # (deployments mount configmaps as volumes)
+      # --server-side avoids 262144 byte annotation limit for large ConfigMaps
       - name: Apply All ConfigMaps
-        run: kubectl apply -f k8s/configmaps/
+        run: kubectl apply --server-side -f k8s/configmaps/
 
       # Step 4 — Apply all monitoring manifests
       # (RBAC, DaemonSets, Deployments, Services, PVCs)
       - name: Apply Monitoring Manifests
-        run: kubectl apply -f k8s/monitoring/
+        run: kubectl apply --server-side -f k8s/monitoring/
 
       # Step 5 — Restart deployments to pick up new configmap values
       - name: Restart Prometheus
