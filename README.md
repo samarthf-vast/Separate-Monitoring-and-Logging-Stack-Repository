@@ -1,4 +1,4 @@
-# Weather App — Monitoring & Logging Stack
+# Monitoring & Logging Stack
 
 A standalone Kubernetes monitoring repository for the weather application. It deploys **Prometheus**, **Grafana**, **Loki**, **Grafana Alloy**, **cAdvisor**, and **Node Exporter** into a dedicated `weather-monitoring` namespace and is fully automated via GitHub Actions CI/CD.
 
