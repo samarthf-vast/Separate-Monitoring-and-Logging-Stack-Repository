@@ -1,6 +1,6 @@
 # Monitoring & Logging Stack
 
-A standalone Kubernetes monitoring repository for the weather application. It deploys **Prometheus**, **Grafana**, **Loki**, **Grafana Alloy**, **cAdvisor**, and **Node Exporter** into a dedicated `weather-monitoring` namespace and is fully automated via GitHub Actions CI/CD.
+A standalone Kubernetes monitoring repository for the  application. It deploys **Prometheus**, **Grafana**, **Loki**, **Grafana Alloy**, **cAdvisor**, and **Node Exporter** into a dedicated `-monitoring` namespace and is fully automated via GitHub Actions CI/CD.
 
 ---
 
@@ -25,7 +25,7 @@ monitoring/
 │   └── workflows/
 │       └── monitoring-deploy.yml   # CI/CD pipeline
 ├── k8s/
-│   ├── namespace.yml               # weather-app + weather-monitoring namespaces
+│   ├── namespace.yml               # ''-app + ''-monitoring namespaces
 │   ├── configmaps/                 # All configuration files
 │   │   ├── prometheus-config.yml
 │   │   ├── loki-config.yml
@@ -67,8 +67,8 @@ monitoring/
 - `kubectl` configured and pointing to the target cluster
 - NGINX Ingress Controller installed in the cluster
 - DNS records (or `/etc/hosts` entries) for:
-  - `grafana.weatherapp.com`
-  - `prometheus.weatherapp.com`
+  - `grafana.''app.com`
+  - `prometheus.''app.com`
 
 ---
 
@@ -93,8 +93,8 @@ kubectl apply -f k8s/namespace.yml
 ```
 
 This creates two namespaces:
-- `weather-app` — for the weather application pods
-- `weather-monitoring` — for all monitoring tools
+- `''-app` — for the '' application pods
+- `''-monitoring` — for all monitoring tools
 
 ---
 
@@ -105,7 +105,7 @@ kubectl create secret generic grafana-secrets \
   --from-literal=GF_SECURITY_ADMIN_USER=<your-user> \
   --from-literal=GF_SECURITY_ADMIN_PASSWORD=<your-password> \
   --from-literal=GF_SMTP_PASSWORD=<your-smtp-password> \
-  --namespace=weather-monitoring \
+  --namespace=''-monitoring \
   --dry-run=client -o yaml | kubectl apply -f -
 ```
 
@@ -142,9 +142,9 @@ Deploys all components: RBAC, DaemonSets, Deployments, Services, PVCs, and Ingre
 ### Step 6 — Restart Deployments
 
 ```bash
-kubectl rollout restart deployment/prometheus -n weather-monitoring
-kubectl rollout restart deployment/grafana    -n weather-monitoring
-kubectl rollout restart deployment/loki       -n weather-monitoring
+kubectl rollout restart deployment/prometheus -n ''-monitoring
+kubectl rollout restart deployment/grafana    -n ''-monitoring
+kubectl rollout restart deployment/loki       -n ''-monitoring
 ```
 
 Restarts pick up any updated ConfigMap values mounted as volumes.
@@ -154,7 +154,7 @@ Restarts pick up any updated ConfigMap values mounted as volumes.
 ### Step 7 — Verify Everything is Running
 
 ```bash
-kubectl get pods -n weather-monitoring
+kubectl get pods -n ''-monitoring
 ```
 
 Wait for all pods to show `Running`:
@@ -175,8 +175,8 @@ node-exporter-xxxxx (per node)   1/1     Running   0
 
 | Service | URL |
 |---|---|
-| Grafana | http://grafana.weatherapp.com |
-| Prometheus | http://prometheus.weatherapp.com |
+| Grafana | http://grafana.''app.com |
+| Prometheus | http://prometheus.''app.com |
 
 Log in to Grafana with the admin credentials from Step 1. Dashboards for **Container Monitoring**, **Logs**, and **Node Exporter** are provisioned automatically.
 
@@ -206,7 +206,7 @@ The self-hosted runner must have `kubectl` access to the target cluster.
 
 | Job | Target | What it collects |
 |---|---|---|
-| `backend` | `backend.weather-app.svc.cluster.local:5000` | Weather app custom metrics |
+| `backend` | `backend.''-app.svc.cluster.local:5000` | '' app custom metrics |
 | `node` | `node-exporter:9100` | Host CPU, memory, disk, network |
 | `cadvisor` | `cadvisor:8080` | Per-container resource usage |
 
