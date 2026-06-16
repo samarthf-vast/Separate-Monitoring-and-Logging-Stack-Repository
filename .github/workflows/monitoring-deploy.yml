@@ -44,7 +44,7 @@ jobs:
             --from-literal=GF_SECURITY_ADMIN_USER=${{ secrets.GRAFANA_ADMIN_USER }} \
             --from-literal=GF_SECURITY_ADMIN_PASSWORD=${{ secrets.GRAFANA_ADMIN_PASSWORD }} \
             --from-literal=GF_SMTP_PASSWORD=${{ secrets.GRAFANA_SMTP_PASSWORD }} \
-            --namespace=weather-monitoring \
+            --namespace=monitoring \
             --dry-run=client -o yaml | kubectl apply -f -
 
       # Step 3 — ConfigMaps must be applied before deployments
@@ -60,24 +60,24 @@ jobs:
 
       # Step 5 — Restart deployments to pick up new configmap values
       - name: Restart Prometheus
-        run: kubectl rollout restart deployment/prometheus -n weather-monitoring
+        run: kubectl rollout restart deployment/prometheus -n monitoring
 
       - name: Restart Grafana
-        run: kubectl rollout restart deployment/grafana -n weather-monitoring
+        run: kubectl rollout restart deployment/grafana -n monitoring
 
       - name: Restart Loki
-        run: kubectl rollout restart deployment/loki -n weather-monitoring
+        run: kubectl rollout restart deployment/loki -n monitoring
 
       # Step 6 — Wait for all deployments to be healthy
       - name: Wait for Prometheus
-        run: kubectl rollout status deployment/prometheus -n weather-monitoring --timeout=120s
+        run: kubectl rollout status deployment/prometheus -n monitoring --timeout=120s
 
       - name: Wait for Grafana
-        run: kubectl rollout status deployment/grafana -n weather-monitoring --timeout=120s
+        run: kubectl rollout status deployment/grafana -n monitoring --timeout=120s
 
       - name: Wait for Loki
-        run: kubectl rollout status deployment/loki -n weather-monitoring --timeout=120s
+        run: kubectl rollout status deployment/loki -n monitoring --timeout=120s
 
       # Step 7 — Final verification
       - name: Verify All Monitoring Pods
-        run: kubectl get pods -n weather-monitoring
+        run: kubectl get pods -n monitoring
