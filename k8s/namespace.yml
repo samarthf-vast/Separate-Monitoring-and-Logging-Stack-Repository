@@ -6,6 +6,5 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: weather-monitoring
-# trigger
-# pipeline test Friday 22 May 2026 11:10:33 AM IST
+  name: monitoring
+
