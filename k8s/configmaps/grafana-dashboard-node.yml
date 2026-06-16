@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboard-node
-  namespace: weather-monitoring
+  namespace: monitoring
 data:
   node-exporter.json: |
     {

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-alerting
-  namespace: weather-monitoring
+  namespace: monitoring
 data:
   contact-points.yaml: |
     apiVersion: 1
@@ -450,7 +450,7 @@ data:
                     max by (container) (
                       sum by (container) (
                         rate(container_cpu_usage_seconds_total{
-                          container!="",container!="POD",namespace="weather-monitoring"
+                          container!="",container!="POD",namespace="monitoring"
                         }[5m])
                       ) * 100
                     )
@@ -488,9 +488,9 @@ data:
                   expr: |
                     max by (container) (
                       (
-                        container_memory_usage_bytes{container!="",container!="POD",namespace="weather-monitoring"}
+                        container_memory_usage_bytes{container!="",container!="POD",namespace="monitoring"}
                         /
-                        container_spec_memory_limit_bytes{container!="",container!="POD",namespace="weather-monitoring"}
+                        container_spec_memory_limit_bytes{container!="",container!="POD",namespace="monitoring"}
                       ) * 100
                     )
                   instant: true
@@ -527,7 +527,7 @@ data:
                   expr: |
                     min by (container) (
                       time() - max_over_time(
-                        container_last_seen{container!="",container!="POD",namespace="weather-monitoring"}[24h]
+                        container_last_seen{container!="",container!="POD",namespace="monitoring"}[24h]
                       )
                     )
                   instant: true

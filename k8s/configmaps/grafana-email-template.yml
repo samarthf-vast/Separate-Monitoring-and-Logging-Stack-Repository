@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-email-template
-  namespace: weather-monitoring
+  namespace: monitoring
 data:
   ng_alert_notification.html: |
     <!doctype html>

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-dashboards
-  namespace: weather-monitoring
+  namespace: monitoring
 data:
   container-monitoring.json: |
     {
@@ -97,7 +97,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "max by (container) (\nrate(container_cpu_usage_seconds_total{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\",cpu=\"total\"\n}[2m]) * 100\n)",
+              "expr": "max by (container) (\nrate(container_cpu_usage_seconds_total{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\",cpu=\"total\"\n}[2m]) * 100\n)",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -175,7 +175,7 @@ data:
                 "uid": "prometheus"
               },
               "editorMode": "code",
-              "expr": "max by (container) (\n(\ncontainer_memory_working_set_bytes{container=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\"}\n/\ncontainer_spec_memory_limit_bytes{container=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\"}\n) * 100\n)",
+              "expr": "max by (container) (\n(\ncontainer_memory_working_set_bytes{container=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\"}\n/\ncontainer_spec_memory_limit_bytes{container=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\"}\n) * 100\n)",
               "legendFormat": "__auto",
               "range": true,
               "refId": "A"
@@ -562,7 +562,7 @@ data:
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "container_memory_working_set_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\"\n} / 1024 / 1024",
+              "expr": "container_memory_working_set_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\"\n} / 1024 / 1024",
               "instant": true,
               "legendFormat": "Used Memory (MB)",
               "range": false,
@@ -575,7 +575,7 @@ data:
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "container_spec_memory_limit_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\"\n} / 1024 / 1024",
+              "expr": "container_spec_memory_limit_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\"\n} / 1024 / 1024",
               "instant": true,
               "legendFormat": "Memory Limit (MB)",
               "range": false,
@@ -588,7 +588,7 @@ data:
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "(\ncontainer_spec_memory_limit_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\"\n}\n-\ncontainer_memory_working_set_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\"\n}\n) / 1024 / 1024",
+              "expr": "(\ncontainer_spec_memory_limit_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\"\n}\n-\ncontainer_memory_working_set_bytes{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\"\n}\n) / 1024 / 1024",
               "instant": true,
               "legendFormat": "Remaining Memory (MB)",
               "range": false,
@@ -661,7 +661,7 @@ data:
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "rate(container_cpu_usage_seconds_total{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\",cpu=\"total\"\n}[2m]) * 100",
+              "expr": "rate(container_cpu_usage_seconds_total{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\",cpu=\"total\"\n}[2m]) * 100",
               "instant": true,
               "legendFormat": "Total CPU Used %",
               "range": false,
@@ -674,7 +674,7 @@ data:
               },
               "editorMode": "code",
               "exemplar": false,
-              "expr": "100 - (\nsum(\nrate(container_cpu_usage_seconds_total{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|weather-monitoring\",cpu=\"total\"\n}[2m])\n)\n/\ncount(node_cpu_seconds_total{mode=\"idle\"})\n) * 100",
+              "expr": "100 - (\nsum(\nrate(container_cpu_usage_seconds_total{\ncontainer=~\"$container\",container!=\"POD\",container!=\"\",namespace=~\"weather-app|monitoring\",cpu=\"total\"\n}[2m])\n)\n/\ncount(node_cpu_seconds_total{mode=\"idle\"})\n) * 100",
               "instant": true,
               "legendFormat": "Total CPU's Available %",
               "range": false,
@@ -698,9 +698,9 @@ data:
             "uid": "prometheus"
           },
           "refresh": 1,
-          "definition": "label_values(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",namespace=~\"weather-app|weather-monitoring\"},container)",
+          "definition": "label_values(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",namespace=~\"weather-app|monitoring\"},container)",
           "query": {
-            "query": "label_values(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",namespace=~\"weather-app|weather-monitoring\"},container)",
+            "query": "label_values(container_cpu_usage_seconds_total{container!=\"\",container!=\"POD\",namespace=~\"weather-app|monitoring\"},container)",
             "refId": "PrometheusVariableQueryEditor-VariableQuery"
           },
           "multi": false,
@@ -820,7 +820,7 @@ data:
           "definition": "label_values(container)",
           "query": {
             "label": "container",
-            "stream": "{namespace=~\"weather-app|weather-monitoring\"}",
+            "stream": "{namespace=~\"weather-app|monitoring\"}",
             "type": 1
           },
           "multi": false,

@@ -2,7 +2,7 @@ apiVersion: apps/v1
 kind: DaemonSet
 metadata:
   name: alloy
-  namespace: weather-monitoring
+  namespace: monitoring
 spec:
   selector:
     matchLabels:

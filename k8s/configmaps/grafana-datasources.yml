@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: grafana-datasources
-  namespace: weather-monitoring
+  namespace: monitoring
 data:
   datasource.yml: |
     apiVersion: 1
